@@ -1,65 +1,178 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef, useEffect, ChangeEvent } from "react";
+import { FaPaperPlane, FaImage, FaTimes } from "react-icons/fa";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+import styles from "./page.module.css";
+
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  type?: "text" | "image";
+  imageUrl?: string;
+}
 
 export default function Home() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages, isTyping]);
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() && !imageFile) return;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input,
+      type: imageFile ? "image" : "text",
+      imageUrl: imagePreview || undefined,
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    clearImage();
+    setIsTyping(true);
+
+    try {
+      let base64Image: string | undefined;
+      if (imageFile) {
+        base64Image = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(imageFile);
+          reader.onload = () => resolve(reader.result as string);
+        });
+      }
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input, imageBase64: base64Image }),
+      });
+
+      const data = await response.json();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.reply,
+          type: data.imageUrl ? "image" : "text",
+          imageUrl: data.imageUrl,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setMessages((prev) => [
+        ...prev,
+        { id: "err", role: "assistant", content: "Error connecting to AI." },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className={styles.chatApp}>
+      <div className={styles.chatWindow} ref={scrollRef}>
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`${styles.message} ${
+              msg.role === "user" ? styles.userMsg : styles.assistantMsg
+            }`}
+          >
+            {msg.imageUrl && (
+              <div className={styles.imageWrapper}>
+                <img src={msg.imageUrl} alt="chat" className={styles.chatImage} />
+              </div>
+            )}
+
+            {msg.content && msg.type !== "image" && (
+              <div className={styles.textBubble}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeKatex]}
+                  children={msg.content}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+
+        {isTyping && (
+          <div className={`${styles.message} ${styles.assistantMsg}`}>
+            <div className={styles.textBubble}>
+              <span className={styles.typingDot}></span>
+              <span className={styles.typingDot}></span>
+              <span className={styles.typingDot}></span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={styles.inputContainer}>
+        {imagePreview && (
+          <div className={styles.previewContainer}>
+            <img src={imagePreview} className={styles.previewImage} alt="preview" />
+            <button onClick={clearImage} className={styles.removePreview}>
+              <FaTimes />
+            </button>
+          </div>
+        )}
+
+        <label className={styles.imageLabel}>
+          <FaImage size={20} />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className={styles.fileInput}
+          />
+        </label>
+
+        <input
+          type="text"
+          placeholder="Ask any Beam Analysis question..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          className={styles.textField}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        <button className={styles.sendBtn} onClick={handleSend}>
+          <FaPaperPlane size={16} />
+        </button>
+      </div>
     </div>
   );
 }

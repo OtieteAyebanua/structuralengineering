@@ -1,26 +1,172 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --header-bg: #1e293b;
+  --user-msg: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --assistant-msg: #ffffff;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: #e2e8f0;
+  --accent: #6366f1;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --header-bg: #020617;
+    --user-msg: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+    --assistant-msg: #1e293b;
+    --input-bg: rgba(30, 41, 59, 0.8);
+    --input-border: #334155;
   }
 }
 
-body {
+.chatApp {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
+
+.header {
+  padding: 1.25rem;
+  background: var(--header-bg);
+  color: white;
+  text-align: center;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.chatWindow {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Messages */
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.userMsg { align-self: flex-end; }
+.assistantMsg { align-self: flex-start; }
+
+.textBubble {
+  padding: 0.85rem 1.25rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.userMsg .textBubble {
+  background: var(--user-msg);
+  color: white;
+  border-radius: 18px 18px 2px 18px;
+}
+
+.assistantMsg .textBubble {
+  background: var(--assistant-msg);
+  color: var(--foreground);
+  border-radius: 18px 18px 18px 2px;
+  border: 1px solid var(--input-border);
+}
+
+/* Floating Input Container */
+.inputAreaContainer {
+  padding: 1rem;
+  background: transparent;
+}
+
+.inputWrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--input-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--input-border);
+  border-radius: 28px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.textField {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0.6rem;
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+/* Image Preview Styles */
+.previewContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.previewImage {
+  width: 45px;
+  height: 45px;
+  border-radius: 8px;
+  object-cover: cover;
+  border: 2px solid var(--accent);
+}
+
+.removePreview {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+}
+
+.imageLabel {
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.imageLabel:hover { color: var(--accent); }
+.fileInput { display: none; }
+
+.sendBtn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.sendBtn:hover { transform: scale(1.05); }
