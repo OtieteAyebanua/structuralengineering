@@ -16,8 +16,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { SolveDiagramTab } from "../diagramsolver";
 
-type Tab = "analysis" | "visual" | "reactions" | "forces" | "diagrams";
+type Tab =
+  | "analysis"
+  | "visual"
+  | "reactions"
+  | "forces"
+  | "diagrams"
+  | "solveDiagram";
 
 const BeamCalculator: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
@@ -713,239 +720,256 @@ const BeamCalculator: React.FC = () => {
 
       {/* ================== TABS ================== */}
       <div className={styles.tabs}>
-        {["analysis", "visual", "reactions", "forces", "diagrams"].map(
-          (tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as Tab)}
-              className={activeTab === tab ? styles.active : ""}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ),
-        )}
+        {[
+          "analysis",
+          "visual",
+          "reactions",
+          "forces",
+          "diagrams",
+          "solveDiagram",
+        ].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab as Tab)}
+            className={activeTab === tab ? styles.active : ""}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
       </div>
 
       {/* ================== TAB CONTENT ================== */}
       <div className={styles.tabContent}>
         {/* ANALYSIS */}
-        {moments.map((spanMoment) => (
-          <div
-            key={spanMoment.spanId}
-            style={{
-              padding: 15,
-              backgroundColor: "#edf2f7",
-              borderRadius: 8,
-              minWidth: 200,
-            }}
-          >
-            <p style={{ fontWeight: "bold", marginBottom: 5 }}>
-              Span {spanMoment.spanId}
-            </p>
-            <p>
-              M<sub>AB</sub>:{" "}
-              <span
-                style={{ color: spanMoment.M_AB >= 0 ? "#38a169" : "#e53e3e" }}
-              >
-                {spanMoment.M_AB.toFixed(2)} kNm
-              </span>
-            </p>
-            <p>
-              M<sub>BA</sub>:{" "}
-              <span
-                style={{ color: spanMoment.M_BA >= 0 ? "#38a169" : "#e53e3e" }}
-              >
-                {spanMoment.M_BA.toFixed(2)} kNm
-              </span>
-            </p>
-
-            {/* Optional: display new loads */}
-            {spanMoment.pointLoads && spanMoment.pointLoads.length > 0 && (
-              <p style={{ fontSize: 12, marginTop: 5 }}>
-                Point Loads:{" "}
-                {spanMoment.pointLoads
-                  .map((pl) => `${pl.P} kN @ ${pl.a} m`)
-                  .join(", ")}
+        {activeTab === "analysis" &&
+          moments.map((spanMoment) => (
+            <div
+              key={spanMoment.spanId}
+              style={{
+                padding: 15,
+                backgroundColor: "#edf2f7",
+                borderRadius: 8,
+                minWidth: 200,
+              }}
+            >
+              <p style={{ fontWeight: "bold", marginBottom: 5 }}>
+                Span {spanMoment.spanId}
               </p>
-            )}
-
-            {spanMoment.pointMoments && spanMoment.pointMoments.length > 0 && (
-              <p style={{ fontSize: 12, marginTop: 5 }}>
-                Point Moments:{" "}
-                {spanMoment.pointMoments
-                  .map((pm) => `${pm.M} kNm @ ${pm.a} m`)
-                  .join(", ")}
+              <p>
+                M<sub>AB</sub>:{" "}
+                <span
+                  style={{
+                    color: spanMoment.M_AB >= 0 ? "#38a169" : "#e53e3e",
+                  }}
+                >
+                  {spanMoment.M_AB.toFixed(2)} kNm
+                </span>
               </p>
-            )}
-
-            {spanMoment.varyingLoad && spanMoment.varyingLoad.length > 0 && (
-              <p style={{ fontSize: 12, marginTop: 5 }}>
-                Varying Load:{" "}
-                {spanMoment.varyingLoad
-                  .map((vl) => `${vl.w1} → ${vl.w2} kN/m`)
-                  .join(", ")}
+              <p>
+                M<sub>BA</sub>:{" "}
+                <span
+                  style={{
+                    color: spanMoment.M_BA >= 0 ? "#38a169" : "#e53e3e",
+                  }}
+                >
+                  {spanMoment.M_BA.toFixed(2)} kNm
+                </span>
               </p>
-            )}
-          </div>
-        ))}
+
+              {/* Optional: display new loads */}
+              {spanMoment.pointLoads && spanMoment.pointLoads.length > 0 && (
+                <p style={{ fontSize: 12, marginTop: 5 }}>
+                  Point Loads:{" "}
+                  {spanMoment.pointLoads
+                    .map((pl) => `${pl.P} kN @ ${pl.a} m`)
+                    .join(", ")}
+                </p>
+              )}
+
+              {spanMoment.pointMoments &&
+                spanMoment.pointMoments.length > 0 && (
+                  <p style={{ fontSize: 12, marginTop: 5 }}>
+                    Point Moments:{" "}
+                    {spanMoment.pointMoments
+                      .map((pm) => `${pm.M} kNm @ ${pm.a} m`)
+                      .join(", ")}
+                  </p>
+                )}
+
+              {spanMoment.varyingLoad && spanMoment.varyingLoad.length > 0 && (
+                <p style={{ fontSize: 12, marginTop: 5 }}>
+                  Varying Load:{" "}
+                  {spanMoment.varyingLoad
+                    .map((vl) => `${vl.w1} → ${vl.w2} kN/m`)
+                    .join(", ")}
+                </p>
+              )}
+            </div>
+          ))}
 
         {/* VISUAL */}
-        <div>
-          <h3>Beam Visualization</h3>
-          <svg
-            width={beam.spans.reduce((sum, s) => sum + s.L * 100, 0) + 60}
-            height={120}
-          >
-            {/* Arrow marker */}
-            <defs>
-              <marker
-                id="arrow"
-                markerWidth="6"
-                markerHeight="6"
-                refX="5"
-                refY="3"
-                orient="auto"
-                markerUnits="strokeWidth"
-              >
-                <path d="M0,0 L0,6 L6,3 z" fill="#e53e3e" />
-              </marker>
-            </defs>
+        {activeTab === "visual" && (
+          <div>
+            <h3>Beam Visualization</h3>
+            <svg
+              width={beam.spans.reduce((sum, s) => sum + s.L * 100, 0) + 60}
+              height={120}
+            >
+              {/* Arrow marker */}
+              <defs>
+                <marker
+                  id="arrow"
+                  markerWidth="6"
+                  markerHeight="6"
+                  refX="5"
+                  refY="3"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M0,0 L0,6 L6,3 z" fill="#e53e3e" />
+                </marker>
+              </defs>
 
-            {/* Beam baseline */}
-            <line
-              x1={30}
-              y1={60}
-              x2={30 + beam.spans.reduce((sum, s) => sum + s.L * 100, 0)}
-              y2={60}
-              stroke="#2d3748"
-              strokeWidth={8}
-            />
+              {/* Beam baseline */}
+              <line
+                x1={30}
+                y1={60}
+                x2={30 + beam.spans.reduce((sum, s) => sum + s.L * 100, 0)}
+                y2={60}
+                stroke="#2d3748"
+                strokeWidth={8}
+              />
 
-            {/* Support symbols */}
-            {beam.nodes.map((node, idx) => {
-              const x =
-                30 +
-                beam.spans.slice(0, idx).reduce((acc, s) => acc + s.L * 100, 0);
+              {/* Support symbols */}
+              {beam.nodes.map((node, idx) => {
+                const x =
+                  30 +
+                  beam.spans
+                    .slice(0, idx)
+                    .reduce((acc, s) => acc + s.L * 100, 0);
 
-              const y = 60;
+                const y = 60;
 
-              switch (node.support) {
-                case "pinned":
-                  return (
-                    <g key={node.id}>
-                      <polygon
-                        points={`${x - 10},${y + 10} ${x + 10},${y + 10} ${x},${y}`}
-                        fill="#2d3748"
-                      />
-                    </g>
-                  );
-
-                case "roller":
-                  return (
-                    <g key={node.id}>
-                      {/* triangle */}
-                      <polygon
-                        points={`${x - 10},${y + 8} ${x + 10},${y + 8} ${x},${y}`}
-                        fill="#2d3748"
-                      />
-                      {/* rollers */}
-                      <circle cx={x - 6} cy={y + 14} r={3} fill="#2d3748" />
-                      <circle cx={x + 6} cy={y + 14} r={3} fill="#2d3748" />
-                    </g>
-                  );
-
-                case "fixed":
-                  return (
-                    <g key={node.id}>
-                      <rect
-                        x={x - 4}
-                        y={y - 20}
-                        width={8}
-                        height={40}
-                        fill="#2d3748"
-                      />
-                    </g>
-                  );
-
-                default:
-                  return null;
-              }
-            })}
-
-            {/* Spans */}
-            {beam.spans.map((span, idx) => {
-              const startX =
-                30 +
-                beam.spans.slice(0, idx).reduce((acc, s) => acc + s.L * 100, 0);
-              const endX = startX + span.L * 100;
-
-              return (
-                <g key={span.id}>
-                  {/* UDL */}
-                  {span.w && (
-                    <line
-                      x1={startX}
-                      y1={60}
-                      x2={endX}
-                      y2={60}
-                      stroke="#e53e3e"
-                      strokeWidth={4}
-                      markerEnd="url(#arrow)"
-                    />
-                  )}
-
-                  {/* Point Loads */}
-                  {(span.pointLoads || []).map((pl, i) => {
-                    const x = startX + (pl.a / span.L) * (endX - startX);
+                switch (node.support) {
+                  case "pinned":
                     return (
+                      <g key={node.id}>
+                        <polygon
+                          points={`${x - 10},${y + 10} ${x + 10},${y + 10} ${x},${y}`}
+                          fill="#2d3748"
+                        />
+                      </g>
+                    );
+
+                  case "roller":
+                    return (
+                      <g key={node.id}>
+                        {/* triangle */}
+                        <polygon
+                          points={`${x - 10},${y + 8} ${x + 10},${y + 8} ${x},${y}`}
+                          fill="#2d3748"
+                        />
+                        {/* rollers */}
+                        <circle cx={x - 6} cy={y + 14} r={3} fill="#2d3748" />
+                        <circle cx={x + 6} cy={y + 14} r={3} fill="#2d3748" />
+                      </g>
+                    );
+
+                  case "fixed":
+                    return (
+                      <g key={node.id}>
+                        <rect
+                          x={x - 4}
+                          y={y - 20}
+                          width={8}
+                          height={40}
+                          fill="#2d3748"
+                        />
+                      </g>
+                    );
+
+                  default:
+                    return null;
+                }
+              })}
+
+              {/* Spans */}
+              {beam.spans.map((span, idx) => {
+                const startX =
+                  30 +
+                  beam.spans
+                    .slice(0, idx)
+                    .reduce((acc, s) => acc + s.L * 100, 0);
+                const endX = startX + span.L * 100;
+
+                return (
+                  <g key={span.id}>
+                    {/* UDL */}
+                    {span.w && (
                       <line
-                        key={i}
-                        x1={x}
+                        x1={startX}
                         y1={60}
-                        x2={x}
-                        y2={40}
+                        x2={endX}
+                        y2={60}
                         stroke="#e53e3e"
-                        strokeWidth={3}
+                        strokeWidth={4}
                         markerEnd="url(#arrow)"
                       />
-                    );
-                  })}
+                    )}
 
-                  {/* Varying Loads */}
-                  {(span.varyingLoad || []).map((vl, i) => (
-                    <polygon
-                      key={i}
-                      points={`${startX},60 ${startX},${60 - vl.w1 * 5} ${endX},${
-                        60 - vl.w2 * 5
-                      } ${endX},60`}
-                      fill="rgba(229,62,62,0.5)"
-                    />
-                  ))}
+                    {/* Point Loads */}
+                    {(span.pointLoads || []).map((pl, i) => {
+                      const x = startX + (pl.a / span.L) * (endX - startX);
+                      return (
+                        <line
+                          key={i}
+                          x1={x}
+                          y1={60}
+                          x2={x}
+                          y2={40}
+                          stroke="#e53e3e"
+                          strokeWidth={3}
+                          markerEnd="url(#arrow)"
+                        />
+                      );
+                    })}
 
-                  {/* Point Moments */}
-                  {(span.pointMoments || []).map((pm, i) => {
-                    const x = startX + (pm.a / span.L) * (endX - startX);
-                    return (
-                      <text
+                    {/* Varying Loads */}
+                    {(span.varyingLoad || []).map((vl, i) => (
+                      <polygon
                         key={i}
-                        x={x - 4} // adjust horizontal alignment
-                        y={35}
-                        fill="#e53e3e"
-                        fontSize={12}
-                        fontWeight="bold"
-                      >
-                        ⟳
-                      </text>
-                    );
-                  })}
-                </g>
-              );
-            })}
-          </svg>
-          <p style={{ marginTop: 10, fontSize: 14, color: "#4a5568" }}>
-            Red lines/arrows: UDLs and point loads; Curved or ⟳: moments
-          </p>
-        </div>
+                        points={`${startX},60 ${startX},${60 - vl.w1 * 5} ${endX},${
+                          60 - vl.w2 * 5
+                        } ${endX},60`}
+                        fill="rgba(229,62,62,0.5)"
+                      />
+                    ))}
+
+                    {/* Point Moments */}
+                    {(span.pointMoments || []).map((pm, i) => {
+                      const x = startX + (pm.a / span.L) * (endX - startX);
+                      return (
+                        <text
+                          key={i}
+                          x={x - 4} // adjust horizontal alignment
+                          y={35}
+                          fill="#e53e3e"
+                          fontSize={12}
+                          fontWeight="bold"
+                        >
+                          ⟳
+                        </text>
+                      );
+                    })}
+                  </g>
+                );
+              })}
+            </svg>
+            <p style={{ marginTop: 10, fontSize: 14, color: "#4a5568" }}>
+              Red lines/arrows: UDLs and point loads; Curved or ⟳: moments
+            </p>
+          </div>
+        )}
 
         {/* REACTIONS */}
         {activeTab === "reactions" && (
@@ -1089,6 +1113,8 @@ const BeamCalculator: React.FC = () => {
             ))}
           </>
         )}
+
+        {activeTab === "solveDiagram" && <SolveDiagramTab />}
       </div>
     </div>
   );
