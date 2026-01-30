@@ -16,7 +16,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { SolveDiagramTab } from "../diagramsolver";
+import { SolveDiagramTab } from "..";
+import FinalMoment from "../finalMoments";
+import Equilibrium from "../equilibrum";
+import SlopeDeflection from "../slopedeflection";
+import SwayFrame from "../sway";
 
 type Tab =
   | "analysis"
@@ -24,7 +28,11 @@ type Tab =
   | "reactions"
   | "forces"
   | "diagrams"
-  | "solveDiagram";
+  | "solveDiagram"
+  | "slopeDeflection"
+  | "equilibrium"
+  | "finalMoments"
+  | "Sway";
 
 const BeamCalculator: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
@@ -727,6 +735,10 @@ const BeamCalculator: React.FC = () => {
           "forces",
           "diagrams",
           "solveDiagram",
+          "slopeDeflection",
+          "equilibrium",
+          "finalMoments",
+          "Sway",
         ].map((tab) => (
           <button
             key={tab}
@@ -1115,6 +1127,65 @@ const BeamCalculator: React.FC = () => {
         )}
 
         {activeTab === "solveDiagram" && <SolveDiagramTab />}
+
+        {activeTab === "slopeDeflection" && (
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            {moments.map((m) => {
+              const span = beam.spans.find((s) => s.id === m.spanId);
+              if (!span) return null;
+
+              return (
+                <SlopeDeflection
+                  key={m.spanId}
+                  spanId={m.spanId}
+                  femAB={m.M_AB}
+                  femBA={m.M_BA}
+                  EI={span.EI}
+                  L={span.L}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {activeTab === "equilibrium" && (
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            {beam.nodes.map((node) => {
+              const nodeMoments = moments
+                .filter(
+                  (m) =>
+                    beam.spans.find((s) => s.id === m.spanId)?.startNode ===
+                      node.id ||
+                    beam.spans.find((s) => s.id === m.spanId)?.endNode ===
+                      node.id,
+                )
+                .flatMap((m) => [m.M_AB, m.M_BA]);
+
+              return <Equilibrium key={node.id} moments={nodeMoments} />;
+            })}
+          </div>
+        )}
+
+        {activeTab === "finalMoments" && (
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            {moments.map((m) => (
+              <FinalMoment
+                key={m.spanId}
+                spanId={m.spanId}
+                MAB={m.M_AB}
+                MBA={m.M_BA}
+              />
+            ))}
+          </div>
+        )}
+
+        {activeTab === "Sway" && (
+          <SwayFrame
+            femSolution={{
+              spans: beam.spans.map((s) => ({ L: s.L, EI: s.EI })),
+            }}
+          />
+        )}
       </div>
     </div>
   );
